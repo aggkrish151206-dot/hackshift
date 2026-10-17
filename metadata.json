@@ -1,0 +1,6 @@
+{
+  "name": "BlindProof - AI Proof-of-Work Startup Hiring",
+  "description": "Prove your skills, not your background. AI-evaluated blind hiring platform connecting startups with talent through practical challenges and verifiable proof of work.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
