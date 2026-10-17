@@ -83,13 +83,34 @@ export interface EvaluationResult {
   isDemoFallback?: boolean;
 }
 
-export type SubmissionStatus = 'Submitted' | 'Evaluated' | 'Shortlisted' | 'Rejected';
+export type SubmissionStatus = 'Submitted' | 'Evaluated' | 'Shortlisted' | 'Interview' | 'Offer' | 'Rejected';
 
 export interface DefenseResponse {
   questionIndex: number;
   question: string;
   answer: string;
   answeredAt: string;
+  recruiterFeedback?: string;
+}
+
+export interface AnonymityAudit {
+  piiRedactedCount: number;
+  hashProof: string;
+  sanitizedTimestamp: string;
+  checks: string[];
+}
+
+export interface CodeMetrics {
+  cyclomaticComplexity?: string;
+  linesOfCode?: number;
+  originalityScore?: number;
+  testCoverage?: string;
+}
+
+export interface StageHistoryEntry {
+  stage: SubmissionStatus;
+  timestamp: string;
+  note?: string;
 }
 
 export interface Submission {
@@ -107,4 +128,9 @@ export interface Submission {
   revealedAt?: string;
   evaluation?: EvaluationResult;
   defenseResponses?: DefenseResponse[];
+  recruiterNotes?: string;
+  anonymityAudit?: AnonymityAudit;
+  codeMetrics?: CodeMetrics;
+  stageHistory?: StageHistoryEntry[];
 }
+
