@@ -92,7 +92,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             >
               <Briefcase className="w-3.5 h-3.5 shrink-0" />
               <div>
-                <div className="font-semibold text-xs">Founder Role</div>
+                <div className="font-semibold text-xs">Company Recruiter Role</div>
                 <div className="text-[10px] opacity-80">{isFounder ? 'Active' : 'Switch profile'}</div>
               </div>
             </button>

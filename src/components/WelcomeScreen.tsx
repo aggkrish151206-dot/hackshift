@@ -52,7 +52,7 @@ export const WelcomeScreen: React.FC = () => {
                 </div>
                 <div>
                   <div className="font-bold text-sm text-slate-900 group-hover:text-slate-950">
-                    I'm a Founder
+                    I'm a Company Recruiter
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed mt-1">
                     Find talented people, create hiring challenges, and evaluate applicants based on their skills.

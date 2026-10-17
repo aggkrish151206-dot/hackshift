@@ -39,7 +39,7 @@ export const Navbar: React.FC = () => {
                 BlindProof
               </span>
               <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 text-slate-500">
-                {currentUser.role === 'founder' ? 'Founder' : 'Applicant'}
+                {currentUser.role === 'founder' ? 'Company Recruiter' : 'Applicant'}
               </span>
             </button>
 

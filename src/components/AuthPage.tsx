@@ -268,7 +268,7 @@ export const AuthPage: React.FC = () => {
             </button>
 
             <span className="text-[11px] font-mono uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-              {role === 'founder' ? 'Founder Mode' : 'Applicant Mode'}
+              {role === 'founder' ? 'Company Recruiter Mode' : 'Applicant Mode'}
             </span>
           </div>
 
@@ -381,7 +381,7 @@ export const AuthPage: React.FC = () => {
                   }}
                   className="font-semibold text-slate-900 hover:underline"
                 >
-                  Founder sign in
+                  Company Recruiter sign in
                 </button>
               </div>
 
@@ -405,7 +405,7 @@ export const AuthPage: React.FC = () => {
             <form onSubmit={handleFounderLoginSubmit} className="space-y-4 text-xs">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  Founder Sign In
+                  Company Recruiter Sign In
                 </h2>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Enter your credentials to manage hiring challenges and submissions.
@@ -467,11 +467,11 @@ export const AuthPage: React.FC = () => {
                 disabled={loading}
                 className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In as Founder'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In as Company Recruiter'}
               </button>
 
               <div className="pt-2 text-center text-xs text-slate-500">
-                Don't have a founder account?{' '}
+                Don't have a recruiter account?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -505,7 +505,7 @@ export const AuthPage: React.FC = () => {
               {/* Founder 1-click Demo profile */}
               <div className="pt-3 border-t border-slate-100">
                 <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Founder 1-Click Demo
+                  Company Recruiter 1-Click Demo
                 </div>
                 <button
                   type="button"
@@ -526,7 +526,7 @@ export const AuthPage: React.FC = () => {
           {role === 'founder' && mode === 'signup' && (
             <form onSubmit={handleFounderSignUpSubmit} className="space-y-4 text-xs">
               <div>
-                <h2 className="text-base font-bold text-slate-900">Create Founder Account</h2>
+                <h2 className="text-base font-bold text-slate-900">Create Company Recruiter Account</h2>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Sign up to post micro-challenges and discover verified talent.
                 </p>
@@ -611,7 +611,7 @@ export const AuthPage: React.FC = () => {
                 disabled={loading}
                 className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Founder Account'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Company Recruiter Account'}
               </button>
 
               <div className="pt-2 text-center text-xs text-slate-500">
@@ -674,7 +674,7 @@ export const AuthPage: React.FC = () => {
                   }}
                   className="font-semibold text-slate-900 hover:underline"
                 >
-                  Back to founder sign in
+                  Back to recruiter sign in
                 </button>
               </div>
             </form>
