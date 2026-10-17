@@ -168,6 +168,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
+  // Migration check for candidate ID 8705 -> 151206
+  useEffect(() => {
+    let changed = false;
+    const migratedUsers = users.map((u) => {
+      if (u.name.includes('8705') || u.email.includes('8705') || (u.githubUsername && u.githubUsername.includes('8705'))) {
+        changed = true;
+        return {
+          ...u,
+          name: u.name.replace(/8705/g, '151206'),
+          email: u.email.replace(/8705/g, '151206'),
+          githubUsername: u.githubUsername ? u.githubUsername.replace(/8705/g, '151206') : undefined,
+        };
+      }
+      return u;
+    });
+
+    if (changed) {
+      setUsers(migratedUsers);
+    }
+
+    if (currentUser && (currentUser.name.includes('8705') || currentUser.email.includes('8705'))) {
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: prev.name.replace(/8705/g, '151206'),
+              email: prev.email.replace(/8705/g, '151206'),
+              githubUsername: prev.githubUsername ? prev.githubUsername.replace(/8705/g, '151206') : undefined,
+            }
+          : null
+      );
+    }
+  }, [currentUser]);
+
   // Sync state to localStorage
   useEffect(() => {
     try {

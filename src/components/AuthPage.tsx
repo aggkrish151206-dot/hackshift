@@ -137,15 +137,15 @@ export const AuthPage: React.FC = () => {
     setShowSetupModal(false);
 
     if (isNew) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const candidateSuffix = '151206';
       await loginWithGitHub({
         githubId: `demo_${Date.now()}`,
-        username: `applicant_${randomSuffix}`,
-        name: `Candidate ${randomSuffix}`,
-        email: `candidate.${randomSuffix}@example.com`,
+        username: `applicant_${candidateSuffix}`,
+        name: `Candidate ${candidateSuffix}`,
+        email: `candidate.${candidateSuffix}@example.com`,
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
         bio: 'Full-stack software developer with passion for building clean systems.',
-        githubUrl: `https://github.com/applicant_${randomSuffix}`,
+        githubUrl: `https://github.com/applicant_${candidateSuffix}`,
       });
     } else {
       await loginWithGitHub({

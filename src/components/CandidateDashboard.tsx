@@ -35,13 +35,15 @@ export const CandidateDashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-xl font-bold text-slate-900">{currentUser.name}</h1>
+            <h1 className="font-display text-xl font-bold text-slate-900">
+              {currentUser.name ? currentUser.name.replace(/8705/g, '151206') : 'Candidate 151206'}
+            </h1>
             <span className="text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600">
               Candidate Profile
             </span>
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            {currentUser.college || 'Self-Taught Builder'} · {currentUser.email}
+            {currentUser.college || 'Self-Taught Builder'} · {currentUser.email.replace(/8705/g, '151206')}
           </div>
           <div className="flex gap-3 text-xs mt-2 text-slate-600">
             {currentUser.githubUrl && (
