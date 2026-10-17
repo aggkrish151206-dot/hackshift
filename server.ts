@@ -570,4 +570,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only listen on port when not running in Vercel Serverless environment
+if (process.env.VERCEL !== '1') {
+  startServer();
+}
+
+export default app;
+export { app };
