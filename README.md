@@ -12,6 +12,49 @@ Prove your skills, not your background. BlindProof is an AI-evaluated blind hiri
 - **Evidence-Based Technical Scoring**: Ingests candidate implementation code, architectural design decisions, and repository artifacts.
 - **Live Gemini 3.8 Flash Integration**: High-speed rubric scoring and generation of 3 probing interview defense questions.
 - **Stage-Resilient Offline Fallback**: Deterministic evaluation simulation guaranteeing 100% uptime during live pitches.
+- **Founder Challenge Studio**: AI-assisted challenge generator tailored to real-world startup tech stacks and constraints.
+
+---
+
+## 🏗️ Architecture & Workflow
+
+```
+[ Candidate / Talent ]
+         │
+         ▼
+[ Anonymous Persona Creation ]  ──▶  Cryptographic ID (BP-XXXX)
+         │
+         ▼
+[ Practical Challenge Submission ]  ──▶  Code + Architectural Justification
+         │
+         ▼
+[ Server-Side Evaluation Engine ]  ──▶  Google Gemini 3.8 Flash (`@google/genai`)
+         │                                   │ (Structured JSON Rubric)
+         ▼                                   ▼
+[ Evidence Citations & Score ]  ◀────  Technical Defense Questions
+         │
+         ▼
+[ Founder Dashboard & Hiring Decision ]
+```
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19, Vite 8, TypeScript, Tailwind CSS v4, Lucide Icons, Motion
+- **Backend**: Node.js, Express, tsx
+- **AI Engine**: Google Gemini 3.8 Flash (`@google/genai`) with low-latency structured JSON output & offline deterministic fallback
+- **Authentication**: GitHub OAuth integration with anonymous session mapping
+
+---
+
+## 📡 API Endpoints
+
+- `GET /api/health` — Service health and configuration check
+- `POST /api/evaluate` — AI submission evaluation against criteria rubrics
+- `POST /api/generate-challenge` — AI-powered custom challenge generation
+- `GET /api/auth/github/url` — GitHub OAuth authorization flow
+- `GET /api/auth/github/callback` — OAuth token exchange and profile mapping
 
 ---
 
