@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Search } from 'lucide-react';
+import { Search, Coins, CheckCircle2 } from 'lucide-react';
 
 export const ChallengeCatalog: React.FC = () => {
-  const { challenges, submissions, currentUser, navigateTo } = useApp();
+  const { challenges, submissions, currentUser, navigateTo, isChallengeUnlocked } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrack, setSelectedTrack] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
@@ -83,6 +83,7 @@ export const ChallengeCatalog: React.FC = () => {
                   (s) => s.challengeId === challenge.id && s.candidateId === currentUser.id
                 )
               : undefined;
+            const isUnlocked = isChallengeUnlocked(challenge.id) || !!userSub;
 
             return (
               <div
@@ -91,12 +92,24 @@ export const ChallengeCatalog: React.FC = () => {
               >
                 <div className="space-y-1.5 flex-1 max-w-2xl">
                   {/* Clean metadata line */}
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="font-semibold text-slate-800">{challenge.startupName}</span>
                     <span>·</span>
                     <span>{challenge.roleCategory}</span>
                     <span>·</span>
                     <span>{challenge.difficulty}</span>
+                    <span>·</span>
+                    {/* Cost badge */}
+                    <span className="inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
+                      <Coins className="w-3 h-3 text-amber-500" />
+                      <span>Cost: 100 Credits</span>
+                    </span>
+                    {isUnlocked && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Unlocked</span>
+                      </span>
+                    )}
                     {challenge.bountyAmount && (
                       <>
                         <span>·</span>
@@ -136,7 +149,7 @@ export const ChallengeCatalog: React.FC = () => {
                     onClick={() => navigateTo('challenge-detail', challenge.id)}
                     className="px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors"
                   >
-                    {userSub ? 'View Submission' : 'View Task'}
+                    {userSub ? 'View Submission' : isUnlocked ? 'Continue Task' : 'View Task'}
                   </button>
                 </div>
               </div>

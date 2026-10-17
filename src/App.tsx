@@ -8,6 +8,7 @@ import { ChallengeDetail } from './components/ChallengeDetail';
 import { FounderDashboard } from './components/FounderDashboard';
 import { CandidateDashboard } from './components/CandidateDashboard';
 import { ApplicantOnboarding } from './components/ApplicantOnboarding';
+import { CreditsPage } from './components/CreditsPage';
 
 const MainContent: React.FC = () => {
   const { currentView, currentUser, navigateTo, resetDemoData, logout } = useApp();
@@ -34,6 +35,7 @@ const MainContent: React.FC = () => {
         {currentView === 'challenge-detail' && <ChallengeDetail />}
         {currentView === 'founder-dashboard' && <FounderDashboard />}
         {currentView === 'candidate-dashboard' && <CandidateDashboard />}
+        {currentView === 'credits' && <CreditsPage />}
       </main>
 
       {/* Simple, Minimal Footer */}

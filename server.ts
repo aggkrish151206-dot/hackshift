@@ -287,6 +287,133 @@ app.get(['/auth/github/callback', '/auth/github/callback/'], async (req, res) =>
   }
 });
 
+// Import Credit Ledger
+import { creditLedger, SERVER_PACKAGES } from './server/creditLedger';
+
+// --- CREDITS SYSTEM ENDPOINTS ---
+
+// 1. Get Packages
+app.get('/api/credits/packages', (req, res) => {
+  res.json({
+    success: true,
+    packages: SERVER_PACKAGES,
+  });
+});
+
+// 2. Get User Credit Balance & Unlocked Challenges
+app.get('/api/credits/balance', async (req, res) => {
+  const userId = req.query.userId as string;
+  if (!userId) {
+    return res.status(400).json({ success: false, error: 'userId is required' });
+  }
+
+  try {
+    const data = await creditLedger.getBalance(userId);
+    res.json({
+      success: true,
+      balance: data.balance,
+      unlockedChallenges: data.unlockedChallenges,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed fetching balance' });
+  }
+});
+
+// 3. Get User Transaction History
+app.get('/api/credits/transactions', async (req, res) => {
+  const userId = req.query.userId as string;
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, error: 'userId is required' });
+  }
+
+  try {
+    const transactions = await creditLedger.getTransactions(userId, limit);
+    res.json({
+      success: true,
+      transactions,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed fetching transactions' });
+  }
+});
+
+// 4. Atomic Task Credit Consumption (100 credits per task)
+app.post('/api/credits/unlock-task', async (req, res) => {
+  const { userId, challengeId } = req.body;
+
+  if (!userId || !challengeId) {
+    return res.status(400).json({
+      success: false,
+      error: 'userId and challengeId are required',
+    });
+  }
+
+  try {
+    const result = await creditLedger.unlockChallenge(userId, challengeId);
+    if (!result.success) {
+      return res.status(402).json({
+        success: false,
+        balance: result.balance,
+        message: result.message,
+        code: 'INSUFFICIENT_CREDITS',
+      });
+    }
+
+    res.json({
+      success: true,
+      alreadyUnlocked: result.alreadyUnlocked,
+      balance: result.balance,
+      transaction: result.transaction,
+      message: result.message,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to unlock task' });
+  }
+});
+
+// 5. Create Purchase Order (Payment intent)
+app.post('/api/credits/purchase-order', async (req, res) => {
+  const { userId, packageId } = req.body;
+
+  if (!userId || !packageId) {
+    return res.status(400).json({
+      success: false,
+      error: 'userId and packageId are required',
+    });
+  }
+
+  try {
+    const order = await creditLedger.createPurchaseOrder(userId, packageId);
+    res.json({
+      success: true,
+      order,
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message || 'Failed to create order' });
+  }
+});
+
+// 6. Verify and Complete Payment (Server-side validation)
+app.post('/api/credits/verify-payment', async (req, res) => {
+  const { orderId, verificationToken } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({
+      success: false,
+      error: 'orderId is required',
+    });
+  }
+
+  try {
+    const result = await creditLedger.completePurchase(orderId, verificationToken);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message || 'Payment verification failed' });
+  }
+});
+
 // AI Evaluation Endpoint
 app.post('/api/evaluate', async (req, res) => {
   const { challenge, submission, forceDemoFallback } = req.body;

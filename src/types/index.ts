@@ -134,3 +134,37 @@ export interface Submission {
   stageHistory?: StageHistoryEntry[];
 }
 
+export type CreditTransactionType = 
+  | 'Initial Bonus'
+  | 'Task Usage'
+  | 'Purchase'
+  | 'Refund'
+  | 'Admin Adjustment';
+
+export interface CreditTransaction {
+  id: string;
+  userId: string;
+  type: CreditTransactionType;
+  amount: number; // positive or negative
+  balanceAfter: number;
+  description: string;
+  referenceId?: string; // challengeId, orderId, etc.
+  createdAt: string;
+}
+
+export interface CreditPackage {
+  id: string;
+  name: string;
+  credits: number;
+  priceUsd: number;
+  popular?: boolean;
+  badge?: string;
+  description: string;
+}
+
+export interface UserCreditsState {
+  balance: number;
+  unlockedChallenges: string[]; // List of challenge IDs already paid/unlocked
+  transactions: CreditTransaction[];
+}
+

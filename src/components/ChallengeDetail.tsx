@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Clock, Check, Eye } from 'lucide-react';
+import { ArrowLeft, Clock, Check, Eye, Coins, AlertCircle, ShieldCheck, CheckCircle2, Lock } from 'lucide-react';
 
 export const ChallengeDetail: React.FC = () => {
   const {
@@ -13,6 +13,9 @@ export const ChallengeDetail: React.FC = () => {
     isEvaluating,
     evaluationError,
     navigateTo,
+    creditsBalance,
+    isChallengeUnlocked,
+    unlockChallengeTask,
   } = useApp();
 
   const challenge = getChallengeById(selectedChallengeId || '');
@@ -23,6 +26,11 @@ export const ChallengeDetail: React.FC = () => {
   const [repoUrl, setRepoUrl] = useState('');
   const [approachExplanation, setApproachExplanation] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Credit Confirmation & Unlock state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [creditNotice, setCreditNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   if (!challenge) {
     return (
@@ -120,6 +128,35 @@ export const DiagnosticInspector = ({ errorPayload }: { errorPayload: ApiError }
     }
   };
 
+  const handleStartTask = async () => {
+    if (isUnlocking) return;
+    setIsUnlocking(true);
+    setCreditNotice(null);
+
+    try {
+      const result = await unlockChallengeTask(challenge.id);
+      if (result.success) {
+        setCreditNotice({
+          type: 'success',
+          message: `${result.message} Remaining balance: ${result.balance} Credits.`,
+        });
+        setShowConfirmModal(false);
+      } else {
+        setCreditNotice({
+          type: 'error',
+          message: result.message || 'Insufficient credits. Purchase more credits to continue.',
+        });
+      }
+    } catch (err: any) {
+      setCreditNotice({
+        type: 'error',
+        message: err.message || 'Failed to unlock task.',
+      });
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!solutionText || solutionText.trim().length < 20) {
@@ -170,6 +207,17 @@ export const DiagnosticInspector = ({ errorPayload }: { errorPayload: ApiError }
           <span>{challenge.roleCategory}</span>
           <span>·</span>
           <span>{challenge.difficulty}</span>
+          <span>·</span>
+          <span className="inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
+            <Coins className="w-3 h-3 text-amber-500" />
+            <span>Cost: 100 Credits</span>
+          </span>
+          {(isChallengeUnlocked(challenge.id) || !!userSub) && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>Unlocked</span>
+            </span>
+          )}
           <span>·</span>
           <span>Deadline: {challenge.deadline}</span>
           {challenge.bountyAmount && (
@@ -230,6 +278,30 @@ export const DiagnosticInspector = ({ errorPayload }: { errorPayload: ApiError }
         </div>
       </section>
 
+      {/* Notice Banner */}
+      {creditNotice && (
+        <div
+          className={`p-3.5 rounded-lg flex items-start gap-2.5 text-xs ${
+            creditNotice.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-800'
+          }`}
+        >
+          {creditNotice.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 font-medium">{creditNotice.message}</div>
+          <button
+            onClick={() => setCreditNotice(null)}
+            className="text-slate-400 hover:text-slate-600 text-xs ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Submission Section */}
       <section className="border-t border-slate-200 pt-8 space-y-4">
         {userSub ? (
@@ -268,8 +340,81 @@ export const DiagnosticInspector = ({ errorPayload }: { errorPayload: ApiError }
               </div>
             )}
           </div>
+        ) : !isChallengeUnlocked(challenge.id) ? (
+          /* Locked State - Prompt user to confirm start for 100 credits */
+          <div className="p-6 rounded-xl border border-slate-200 bg-slate-50/80 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-md bg-amber-100 text-amber-800">
+                    <Coins className="w-4 h-4 text-amber-700" />
+                  </span>
+                  <h3 className="font-display font-bold text-base text-slate-900">
+                    Task Unlocking Required
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
+                  Starting this challenge costs <strong className="font-mono text-slate-900">100 credits</strong>. Once unlocked, you have unlimited attempts, can refresh the page without re-deduction, and can submit your solution for blinded AI evaluation.
+                </p>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs shrink-0 sm:text-right">
+                <div className="text-slate-500">Your Current Balance:</div>
+                <div className="font-mono font-bold text-base text-slate-900 mt-0.5 flex items-center sm:justify-end gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{creditsBalance} Credits</span>
+                </div>
+              </div>
+            </div>
+
+            {creditsBalance < 100 ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                <div className="flex items-start gap-2.5 text-xs text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-semibold">Insufficient credits.</strong> You have {creditsBalance} credits, but this task requires 100 credits. Purchase more credits to continue.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigateTo('credits')}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Go to Credits Page</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(true)}
+                  className="px-5 py-2.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors shadow-xs inline-flex items-center justify-center gap-2"
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Start Task (Cost: 100 Credits)</span>
+                </button>
+                <span className="text-[11px] text-slate-500">
+                  You will confirm the 100-credit deduction before anything is charged.
+                </span>
+              </div>
+            )}
+          </div>
         ) : (
+          /* Unlocked State - Workspace & Submission Form */
           <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-emerald-50/80 border border-emerald-200 rounded-lg text-xs">
+              <div className="flex items-center gap-2 text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span className="font-medium">
+                  Challenge unlocked · You have full access to submit your work
+                </span>
+              </div>
+              <div className="text-slate-600 font-mono text-[11px]">
+                Available Balance: <strong className="text-slate-900">{creditsBalance} Credits</strong>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
                 Submit Your Work
@@ -361,6 +506,64 @@ export const DiagnosticInspector = ({ errorPayload }: { errorPayload: ApiError }
           </div>
         )}
       </section>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 text-slate-900">
+              <span className="p-1.5 rounded-md bg-amber-100 text-amber-800">
+                <Coins className="w-4 h-4 text-amber-700" />
+              </span>
+              <h3 className="font-display font-bold text-base">
+                Confirm Task Unlock
+              </h3>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-2">
+              <p>
+                Start this task for <strong className="font-mono text-slate-900">100 credits</strong>?
+              </p>
+              <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between text-slate-500">
+                  <span>Current Balance:</span>
+                  <span>{creditsBalance} credits</span>
+                </div>
+                <div className="flex justify-between text-rose-600">
+                  <span>Task Unlock Cost:</span>
+                  <span>-100 credits</span>
+                </div>
+                <div className="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-1">
+                  <span>Remaining Balance:</span>
+                  <span>{creditsBalance - 100} credits</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                This charge is applied once. Refreshing or reopening this task will never charge you again.
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isUnlocking}
+                className="flex-1 py-2 text-xs font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleStartTask}
+                disabled={isUnlocking}
+                className="flex-1 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors disabled:opacity-50"
+              >
+                {isUnlocking ? 'Unlocking...' : 'Confirm & Start'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Challenge, Submission, User, UserRole, EvaluationResult, DefenseResponse, AuthSession, CriterionWeight, SubmissionStatus } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Challenge, Submission, User, UserRole, EvaluationResult, DefenseResponse, AuthSession, CriterionWeight, SubmissionStatus, CreditTransaction, CreditPackage } from '../types';
 import { SEED_CHALLENGES, SEED_SUBMISSIONS, ENRICHED_SEED_SUBMISSIONS, SEED_USERS } from '../data/seedData';
+import { CREDIT_PACKAGES, INITIAL_USER_CREDITS } from '../data/creditConfig';
 
 const STORE_KEY = 'blindproof_store_v2';
 const SESSION_KEY = 'blindproof_session_v2';
 const ROLE_KEY = 'blindproof_selected_role';
 
-export type AppView = 'welcome' | 'login' | 'onboarding' | 'catalog' | 'challenge-detail' | 'founder-dashboard' | 'candidate-dashboard' | 'settings';
+export type AppView = 'welcome' | 'login' | 'onboarding' | 'catalog' | 'challenge-detail' | 'founder-dashboard' | 'candidate-dashboard' | 'settings' | 'credits';
 
 export interface GitHubAuthPayload {
   githubId: string;
@@ -31,6 +32,17 @@ interface AppContextType {
   isEvaluating: boolean;
   evaluationError: string | null;
   toastMessage: string | null;
+
+  // Credits System
+  creditsBalance: number;
+  unlockedChallenges: string[];
+  creditTransactions: CreditTransaction[];
+  creditPackages: CreditPackage[];
+  isCreditsLoading: boolean;
+  refreshCredits: () => Promise<void>;
+  unlockChallengeTask: (challengeId: string) => Promise<{ success: boolean; message: string; balance?: number }>;
+  purchasePackage: (packageId: string) => Promise<{ success: boolean; message: string; balance?: number }>;
+  isChallengeUnlocked: (challengeId: string) => boolean;
 
   // Navigation & Role Selection
   navigateTo: (view: AppView, challengeId?: string, submissionId?: string) => void;
@@ -209,6 +221,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setToastMessage((curr) => (curr === msg ? null : curr));
     }, 3500);
   };
+
+  // Credits System State
+  const [creditsBalance, setCreditsBalance] = useState<number>(() => {
+    try {
+      const savedSessionStr = localStorage.getItem(SESSION_KEY);
+      if (savedSessionStr) {
+        const parsedSession: AuthSession = JSON.parse(savedSessionStr);
+        const stored = localStorage.getItem(`${STORE_KEY}_credits_${parsedSession.userId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return typeof parsed.balance === 'number' ? parsed.balance : INITIAL_USER_CREDITS;
+        }
+      }
+      return INITIAL_USER_CREDITS;
+    } catch {
+      return INITIAL_USER_CREDITS;
+    }
+  });
+
+  const [unlockedChallenges, setUnlockedChallenges] = useState<string[]>(() => {
+    try {
+      const savedSessionStr = localStorage.getItem(SESSION_KEY);
+      if (savedSessionStr) {
+        const parsedSession: AuthSession = JSON.parse(savedSessionStr);
+        const stored = localStorage.getItem(`${STORE_KEY}_credits_${parsedSession.userId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return Array.isArray(parsed.unlockedChallenges) ? parsed.unlockedChallenges : [];
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>(() => {
+    try {
+      const savedSessionStr = localStorage.getItem(SESSION_KEY);
+      if (savedSessionStr) {
+        const parsedSession: AuthSession = JSON.parse(savedSessionStr);
+        const stored = localStorage.getItem(`${STORE_KEY}_txs_${parsedSession.userId}`);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [creditPackages, setCreditPackages] = useState<CreditPackage[]>(CREDIT_PACKAGES);
+  const [isCreditsLoading, setIsCreditsLoading] = useState<boolean>(false);
 
   // Migration check for candidate ID 8705 -> 151206
   useEffect(() => {
@@ -909,6 +975,211 @@ export class MemoryPooledDisseminator {
     return candidate;
   };
 
+  // --- CREDITS SYSTEM ENGINE ---
+
+  // Refresh credits from server (with localStorage fallback)
+  const refreshCredits = useCallback(async () => {
+    if (!currentUser) return;
+    setIsCreditsLoading(true);
+    try {
+      const res = await fetch(`/api/credits/balance?userId=${encodeURIComponent(currentUser.id)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setCreditsBalance(data.balance);
+          setUnlockedChallenges(data.unlockedChallenges || []);
+          try {
+            localStorage.setItem(
+              `${STORE_KEY}_credits_${currentUser.id}`,
+              JSON.stringify({ balance: data.balance, unlockedChallenges: data.unlockedChallenges })
+            );
+          } catch (e) {
+            console.warn('Credits cache save failed:', e);
+          }
+        }
+      }
+
+      const txRes = await fetch(`/api/credits/transactions?userId=${encodeURIComponent(currentUser.id)}`);
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        if (txData.success && Array.isArray(txData.transactions)) {
+          setCreditTransactions(txData.transactions);
+          try {
+            localStorage.setItem(`${STORE_KEY}_txs_${currentUser.id}`, JSON.stringify(txData.transactions));
+          } catch (e) {
+            console.warn('Transactions cache save failed:', e);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Server credits fetch error, using cached state:', err);
+    } finally {
+      setIsCreditsLoading(false);
+    }
+  }, [currentUser]);
+
+  // Sync credits when user logs in or changes
+  useEffect(() => {
+    if (currentUser) {
+      refreshCredits();
+    }
+  }, [currentUser, refreshCredits]);
+
+  const isChallengeUnlocked = useCallback((challengeId: string): boolean => {
+    return unlockedChallenges.includes(challengeId);
+  }, [unlockedChallenges]);
+
+  // Unlock challenge task by paying 100 credits
+  const unlockChallengeTask = async (
+    challengeId: string
+  ): Promise<{ success: boolean; message: string; balance?: number }> => {
+    if (!currentUser) {
+      return { success: false, message: 'You must be logged in to unlock tasks.' };
+    }
+
+    // Fast-path: already unlocked
+    if (unlockedChallenges.includes(challengeId)) {
+      return { success: true, message: 'Task already unlocked.', balance: creditsBalance };
+    }
+
+    try {
+      const res = await fetch('/api/credits/unlock-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, challengeId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        return {
+          success: false,
+          message: data.message || 'Insufficient credits. Purchase more credits to continue.',
+          balance: data.balance !== undefined ? data.balance : creditsBalance,
+        };
+      }
+
+      setCreditsBalance(data.balance);
+      setUnlockedChallenges((prev) => (prev.includes(challengeId) ? prev : [...prev, challengeId]));
+
+      if (data.transaction) {
+        setCreditTransactions((prev) => [data.transaction, ...prev]);
+      }
+
+      try {
+        localStorage.setItem(
+          `${STORE_KEY}_credits_${currentUser.id}`,
+          JSON.stringify({
+            balance: data.balance,
+            unlockedChallenges: [...unlockedChallenges, challengeId],
+          })
+        );
+      } catch (e) {
+        console.warn('Credits cache save failed:', e);
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Challenge unlocked successfully! (100 credits deducted)',
+        balance: data.balance,
+      };
+    } catch (err: any) {
+      // Offline fallback: check balance and deduct
+      if (creditsBalance < 100) {
+        return {
+          success: false,
+          message: 'Insufficient credits. Task costs 100 credits. Please purchase more credits to continue.',
+          balance: creditsBalance,
+        };
+      }
+      const newBal = creditsBalance - 100;
+      const newUnlocked = [...unlockedChallenges, challengeId];
+      const localTx: CreditTransaction = {
+        id: `tx_local_${Date.now()}`,
+        userId: currentUser.id,
+        type: 'Task Usage',
+        amount: -100,
+        balanceAfter: newBal,
+        description: `Task unlock for challenge #${challengeId}`,
+        referenceId: challengeId,
+        createdAt: new Date().toISOString(),
+      };
+      setCreditsBalance(newBal);
+      setUnlockedChallenges(newUnlocked);
+      setCreditTransactions((prev) => [localTx, ...prev]);
+      try {
+        localStorage.setItem(`${STORE_KEY}_credits_${currentUser.id}`, JSON.stringify({ balance: newBal, unlockedChallenges: newUnlocked }));
+        localStorage.setItem(`${STORE_KEY}_txs_${currentUser.id}`, JSON.stringify([localTx, ...creditTransactions]));
+      } catch (e) {
+        console.warn('Offline cache save failed:', e);
+      }
+      return { success: true, message: 'Deducted 100 credits. Challenge unlocked.', balance: newBal };
+    }
+  };
+
+  // Purchase credit package
+  const purchasePackage = async (
+    packageId: string
+  ): Promise<{ success: boolean; message: string; balance?: number }> => {
+    if (!currentUser) {
+      return { success: false, message: 'Please log in to purchase credits.' };
+    }
+
+    try {
+      // 1. Create order intent on server
+      const orderRes = await fetch('/api/credits/purchase-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, packageId }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.success) {
+        throw new Error(orderData.error || 'Failed to initiate checkout order.');
+      }
+
+      // 2. Complete payment verification via server
+      const verifyRes = await fetch('/api/credits/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: orderData.order.id,
+          verificationToken: `token_verified_${Date.now()}`,
+        }),
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.success) {
+        throw new Error(verifyData.error || 'Payment verification failed.');
+      }
+
+      setCreditsBalance(verifyData.balance);
+      if (verifyData.transaction) {
+        setCreditTransactions((prev) => [verifyData.transaction, ...prev]);
+      }
+
+      try {
+        localStorage.setItem(
+          `${STORE_KEY}_credits_${currentUser.id}`,
+          JSON.stringify({ balance: verifyData.balance, unlockedChallenges })
+        );
+      } catch (e) {
+        console.warn('Credits cache save failed:', e);
+      }
+
+      return {
+        success: true,
+        message: verifyData.message || `Successfully purchased ${orderData.order.credits} credits!`,
+        balance: verifyData.balance,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'Payment could not be processed.',
+      };
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -924,6 +1195,15 @@ export class MemoryPooledDisseminator {
         isEvaluating,
         evaluationError,
         toastMessage,
+        creditsBalance,
+        unlockedChallenges,
+        creditTransactions,
+        creditPackages,
+        isCreditsLoading,
+        refreshCredits,
+        unlockChallengeTask,
+        purchasePackage,
+        isChallengeUnlocked,
         navigateTo,
         selectRole,
         showToast,

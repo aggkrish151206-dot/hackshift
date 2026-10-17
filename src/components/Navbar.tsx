@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { SettingsModal } from './SettingsModal';
-import { RotateCcw, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { RotateCcw, LogOut, Settings as SettingsIcon, Coins } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, currentView, navigateTo, logout, resetDemoData } = useApp();
+  const { currentUser, currentView, navigateTo, logout, resetDemoData, creditsBalance } = useApp();
   const [showSettings, setShowSettings] = useState(false);
 
   if (!currentUser) return null;
@@ -43,7 +43,7 @@ export const Navbar: React.FC = () => {
               </span>
             </button>
 
-            {/* Minimal Nav: Dashboard, Challenges, Submissions */}
+            {/* Minimal Nav: Dashboard, Challenges, Submissions, Credits */}
             <nav className="hidden sm:flex items-center gap-5 text-sm text-slate-600">
               <button
                 onClick={handleDashboardClick}
@@ -73,15 +73,39 @@ export const Navbar: React.FC = () => {
               >
                 Submissions
               </button>
+
+              <button
+                onClick={() => navigateTo('credits')}
+                className={`hover:text-slate-900 transition-colors ${
+                  currentView === 'credits' ? 'text-slate-950 font-semibold' : ''
+                }`}
+              >
+                Credits
+              </button>
             </nav>
           </div>
 
-          {/* Right Controls: User info, Settings & Sign out */}
+          {/* Right Controls: Credits display, User info, Settings & Sign out */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Clickable Credits Display */}
+            <button
+              onClick={() => navigateTo('credits')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border transition-all ${
+                creditsBalance < 100
+                  ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100'
+                  : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 hover:border-slate-300'
+              }`}
+              title="Click to view credits & purchase packages"
+            >
+              <Coins className={`w-3.5 h-3.5 ${creditsBalance < 100 ? 'text-amber-600' : 'text-amber-500'}`} />
+              <span className="font-mono font-semibold">{creditsBalance}</span>
+              <span className="text-[11px] text-slate-500 hidden md:inline">Credits</span>
+            </button>
+
             {/* User display */}
             <div className="flex items-center gap-1.5 text-xs text-slate-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="font-medium max-w-[110px] truncate">{currentUser.name}</span>
+              <span className="font-medium max-w-[100px] truncate">{currentUser.name}</span>
             </div>
 
             {/* Settings button */}
